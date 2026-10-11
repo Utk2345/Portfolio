@@ -68,7 +68,7 @@ const defaultProjects: Project[] = [
     theme: "lime",
     liveUrl: "https://habit-garden-nine.vercel.app",
     sourceUrl: "https://github.com/Utk2345/Twelve-Leaves",
-   image: "/projects/Twelve-Leaves.png", // put the file in client/public/projects/
+    image: "/projects/twelve-leaves.webp", // file lives in client/public/projects/
     featured: true,
   },
 ];
@@ -316,7 +316,7 @@ function ProjectModal({
           </div>
           <label>
             Card image <span className="label-hint">optional: path like /projects/name.png, or a full URL</span>
-            <input value={form.image} onChange={(event) => update("image", event.target.value)} placeholder="/projects/Twelve-Leaves.png" />
+            <input value={form.image} onChange={(event) => update("image", event.target.value)} placeholder="/projects/twelve-leaves.webp" />
           </label>
           <div className="modal-actions">
             <button type="button" className="button button--quiet" onClick={onClose}>Cancel</button>

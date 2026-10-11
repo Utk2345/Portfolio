@@ -2,7 +2,7 @@
 
 Personal portfolio website for **Utkarsha**, a full stack developer. It's a single-page site with a hero, an about section, featured and archived projects, light and dark themes, and a working contact form that emails me directly.
 
-**Live site:** https://portfolio-hackerzzz.vercel.app/
+**Live site:** https://portfolio-nu-lemon-33.vercel.app/
 
 ## Features
 
