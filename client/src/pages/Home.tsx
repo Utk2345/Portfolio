@@ -29,15 +29,21 @@ type Project = {
   theme: ProjectTheme;
   liveUrl?: string;
   sourceUrl?: string;
+  /** Optional card image: a path in client/public (e.g. "/projects/twelve-leaves.png") or a full URL. */
+  image?: string;
   featured?: boolean;
 };
 
-type ProjectForm = Omit<Project, "id" | "tags" | "featured" | "liveUrl" | "sourceUrl"> & {
+type ProjectForm = Omit<Project, "id" | "tags" | "featured" | "liveUrl" | "sourceUrl" | "image"> & {
   tagsInput: string;
   liveUrl: string;
   sourceUrl: string;
+  image: string;
 };
 
+// Editing tools (add / edit / delete) only appear in local development. Visitors always see
+// the projects defined in `defaultProjects` below.
+const CAN_EDIT = import.meta.env.DEV;
 const STORAGE_KEY = "folioframe-projects";
 const THEME_KEY = "folioframe-theme";
 const categories = ["All", "Product", "Brand", "Experiments"] as const;
@@ -52,40 +58,18 @@ type ContactForm = {
 
 const defaultProjects: Project[] = [
   {
-    id: "northstar",
-    title: "Northstar",
-    year: "2024",
-    category: "Product",
-    description:
-      "A calmer way for small teams to plan, prioritize, and keep the work moving forward.",
-    tags: ["Product strategy", "UX/UI", "Web app"],
-    theme: "lime",
-    liveUrl: "https://example.com/northstar",
-    sourceUrl: "https://github.com/",
-    featured: true,
-  },
-  {
-    id: "arc-studio",
-    title: "Arc Studio",
-    year: "2023",
-    category: "Brand",
-    description:
-      "A flexible identity system for a creative practice working across architecture, objects, and space.",
-    tags: ["Identity", "Art direction", "Editorial"],
-    theme: "blue",
-    liveUrl: "https://example.com/arc-studio",
-  },
-  {
-    id: "small-hours",
-    title: "Small Hours",
-    year: "2023",
+    id: "Twelve Leaves",
+    title: "Twelve Leaves",
+    year: "2026",
     category: "Experiments",
     description:
-      "An ambient writing tool that makes room for unfinished thoughts and accidental connections.",
-    tags: ["Concept", "Interaction", "Prototype"],
-    theme: "peach",
-    liveUrl: "https://example.com/small-hours",
-    sourceUrl: "https://github.com/",
+      "A garden of habits that grows along with your progress.",
+    tags: ["Interaction", "UX/UI", "Web app"],
+    theme: "lime",
+    liveUrl: "https://habit-garden-nine.vercel.app",
+    sourceUrl: "https://github.com/Utk2345/Twelve-Leaves",
+   image: "/projects/Twelve-Leaves.png", // put the file in client/public/projects/
+    featured: true,
   },
 ];
 
@@ -97,6 +81,7 @@ const emptyForm: ProjectForm = {
   theme: "lime",
   liveUrl: "",
   sourceUrl: "",
+  image: "",
   tagsInput: "",
 };
 
@@ -116,7 +101,7 @@ function getInitialTheme() {
 }
 
 function getInitialProjects() {
-  if (typeof window === "undefined") return defaultProjects;
+  if (typeof window === "undefined" || !CAN_EDIT) return defaultProjects;
 
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -128,7 +113,16 @@ function getInitialProjects() {
   }
 }
 
+const coverImageStyle = { position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" } as const;
+
 function ProjectArtwork({ project }: { project: Project }) {
+  if (project.image) {
+    return (
+      <div className={`artwork artwork--${project.theme}`}>
+        <img src={project.image} alt={`${project.title} preview`} loading="lazy" style={coverImageStyle} />
+      </div>
+    );
+  }
   return (
     <div className={`artwork artwork--${project.theme}`} aria-hidden="true">
       <div className="artwork-grid" />
@@ -184,14 +178,14 @@ function ProjectCard({
               </a>
             )}
           </div>
-          <div className="card-actions" aria-label={`Manage ${project.title}`}>
+          {CAN_EDIT && <div className="card-actions" aria-label={`Manage ${project.title}`}>
             <button type="button" className="icon-button" onClick={() => onEdit(project)} aria-label={`Edit ${project.title}`}>
               <Pencil size={15} />
             </button>
             <button type="button" className="icon-button icon-button--danger" onClick={() => onDelete(project)} aria-label={`Delete ${project.title}`}>
               <Trash2 size={15} />
             </button>
-          </div>
+          </div>}
         </div>
       </div>
     </article>
@@ -227,6 +221,7 @@ function ProjectModal({
       theme: initialProject.theme,
       liveUrl: initialProject.liveUrl ?? "",
       sourceUrl: initialProject.sourceUrl ?? "",
+      image: initialProject.image ?? "",
       tagsInput: initialProject.tags.join(", "),
     });
   }, [open, initialProject]);
@@ -254,6 +249,7 @@ function ProjectModal({
       theme: form.theme,
       liveUrl: form.liveUrl.trim() || undefined,
       sourceUrl: form.sourceUrl.trim() || undefined,
+      image: form.image.trim() || undefined,
       featured: initialProject?.featured,
     });
     onClose();
@@ -318,6 +314,10 @@ function ProjectModal({
               <input type="url" value={form.sourceUrl} onChange={(event) => update("sourceUrl", event.target.value)} placeholder="https://github.com/" />
             </label>
           </div>
+          <label>
+            Card image <span className="label-hint">optional: path like /projects/name.png, or a full URL</span>
+            <input value={form.image} onChange={(event) => update("image", event.target.value)} placeholder="/projects/Twelve-Leaves.png" />
+          </label>
           <div className="modal-actions">
             <button type="button" className="button button--quiet" onClick={onClose}>Cancel</button>
             <button type="submit" className="button button--dark"><Check size={16} /> {mode === "add" ? "Add project" : "Save changes"}</button>
@@ -342,7 +342,7 @@ export default function Home() {
   const [contactSending, setContactSending] = useState(false);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    if (CAN_EDIT) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
   }, [projects]);
 
   useEffect(() => {
@@ -411,9 +411,9 @@ export default function Home() {
   return (
     <div className="site-shell" id="top">
       <header className="site-header">
-        <a className="wordmark" href="#top" aria-label="Folioframe home">
+        <a className="wordmark" href="#top" aria-label="Portfolio home">
           <span className="wordmark-mark">F<span>/</span></span>
-          <span>folioframe</span>
+          <span>Portfolio</span>
         </a>
         <button type="button" className="menu-toggle" onClick={() => setMenuOpen((open) => !open)} aria-label="Toggle navigation">
           {menuOpen ? <X size={20} /> : <Menu size={20} />}
@@ -433,17 +433,17 @@ export default function Home() {
       <main>
         <section className="hero section-pad">
           <div className="hero-copy">
-            <p className="eyebrow"><span className="eyebrow-line" /> Independent designer & builder</p>
-            <h1>Digital work with <em>good bones.</em></h1>
-            <p className="hero-lede">I’m Alex — a product-minded creative making thoughtful identities, useful interfaces, and the occasional beautiful detour.</p>
+            <p className="eyebrow"><span className="eyebrow-line" /> Independent Full Stack Developer</p>
+            <h1>Software that’s built to last.</h1>
+            <p className="hero-lede">I’m Utkarsha — I design and build applications end to end, from Design to deployment.</p>
             <div className="hero-actions">
               <a className="button button--lime" href="#work">See the work <ArrowDownRight size={17} /></a>
               <a className="text-link" href="#contact-form">Let’s talk <ArrowUpRight size={15} /></a>
             </div>
           </div>
           <div className="hero-note">
-            <div className="hero-note__top"><Sparkles size={17} /><span>Currently shaping</span></div>
-            <p>Simple tools for complex ideas — from the first sketch to the last pixel.</p>
+            <div className="hero-note__top"><Sparkles size={17} /><span>Currently</span></div>
+            <p>Going deeper on backend: sharpening my skills in Node.js, API design, and database architecture. I’m also exploring the world of AI and how it can be integrated into applications.</p>
             <div className="hero-note__footer"><span>01 / 04</span><span>Scroll to explore ↓</span></div>
           </div>
         </section>
@@ -452,12 +452,13 @@ export default function Home() {
           <span className="section-index">01</span>
           <div className="intro-strip__copy">
             <p className="eyebrow">A little context</p>
-            <p className="intro-statement">I like working where strategy gets its hands dirty. The result is usually a clearer idea, a better system, and something people actually enjoy using.</p>
+            <p className="intro-statement"> I like the whole path from idea to deployed product. I’ll sketch the interface, write the backend, and ship it, so what you get is a working thing rather than a hand-off</p>
           </div>
           <div className="intro-facts">
-            <div><span>Based in</span><strong>New Delhi, IN</strong></div>
-            <div><span>Focus</span><strong>Product · Identity · UI</strong></div>
-            <div><span>Elsewhere</span><strong><a href="https://www.linkedin.com/" target="_blank" rel="noreferrer">LinkedIn ↗</a></strong></div>
+            <div><span>Based in</span><strong>Chhatrapati Sambhajinagar, India · Open to remote</strong></div>
+            <div><span>Focus</span><strong>Full stack web · APIs and backend · UI/UX design</strong></div>
+             <div><span>Stack</span><strong>Node.js · React · TypeScript · Tailwind · DrizzleORM · PostgreSQL</strong></div>
+            <div><span>Elsewhere</span><strong><a href="https://github.com/Utk2345" target="_blank" rel="noreferrer">Github</a></strong></div>
           </div>
         </section>
 
@@ -465,15 +466,23 @@ export default function Home() {
           <section className="featured-section section-pad" id="work">
             <div className="section-heading">
               <div><span className="section-index">02</span><p className="eyebrow">Featured work</p></div>
-              <button type="button" className="button button--outline" onClick={openAdd}><Plus size={16} /> Add project</button>
+              {CAN_EDIT && <button type="button" className="button button--outline" onClick={openAdd}><Plus size={16} /> Add project</button>}
             </div>
             <article className="featured-card">
               <div className="featured-art">
-                <div className="featured-art__grid" />
-                <span className="featured-art__label">Case study / {featuredProject.year}</span>
-                <span className="featured-art__index">01</span>
-                <div className="featured-art__circle"><span>North<br />star</span></div>
-                <div className="featured-art__caption">A calmer way to move forward.</div>
+                {featuredProject.image ? (
+                  <img src={featuredProject.image} alt={`${featuredProject.title} preview`} style={coverImageStyle} />
+                ) : (
+                  <>
+                    <div className="featured-art__grid" />
+                    <span className="featured-art__label">Case study / {featuredProject.year}</span>
+                    <span className="featured-art__index">01</span>
+                    <div className="featured-art__circle" style={featuredProject.title.split(" ").some((word) => word.length > 5) ? { fontSize: "clamp(2.2rem, 5vw, 4.6rem)" } : undefined}>
+                      <span>{featuredProject.title.split(" ").map((word, i) => <span key={i} style={{ display: "block", transform: "none" }}>{word}</span>)}</span>
+                    </div>
+                    <div className="featured-art__caption">{featuredProject.tags.join(" · ")}</div>
+                  </>
+                )}
               </div>
               <div className="featured-card__body">
                 <div className="project-card__meta"><span>{featuredProject.category}</span><span>{featuredProject.year}</span></div>
@@ -482,7 +491,7 @@ export default function Home() {
                 <div className="tag-list">{featuredProject.tags.map((tag) => <span className="tag" key={tag}>{tag}</span>)}</div>
                 <div className="featured-card__bottom">
                   <a className="button button--dark" href={featuredProject.liveUrl ?? "#"} target="_blank" rel="noreferrer">View case study <ArrowUpRight size={16} /></a>
-                  <button type="button" className="text-link" onClick={() => openEdit(featuredProject)}>Edit project <Pencil size={14} /></button>
+                  {CAN_EDIT && <button type="button" className="text-link" onClick={() => openEdit(featuredProject)}>Edit project <Pencil size={14} /></button>}
                 </div>
               </div>
             </article>
@@ -501,7 +510,7 @@ export default function Home() {
               {filteredProjects.map((project, index) => <ProjectCard key={project.id} project={project} index={index} onEdit={openEdit} onDelete={deleteProject} />)}
             </div>
           ) : (
-            <div className="empty-state"><p>No {filter.toLowerCase()} projects yet.</p><button type="button" className="text-link" onClick={openAdd}>Add the first one <Plus size={14} /></button></div>
+            <div className="empty-state"><p>No {filter.toLowerCase()} projects yet.</p>{CAN_EDIT && <button type="button" className="text-link" onClick={openAdd}>Add the first one <Plus size={14} /></button>}</div>
           )}
         </section>
 
@@ -530,12 +539,12 @@ export default function Home() {
       </main>
 
       <footer className="site-footer section-pad">
-        <span>© {new Date().getFullYear()} Alex / Folioframe</span>
+        <span>© {new Date().getFullYear()} Utkarsha - Portfolio.</span>
         <span>Made with attention, not urgency.</span>
-        <div className="footer-links"><a href="https://github.com/" target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={16} /></a><a href="https://www.linkedin.com/" target="_blank" rel="noreferrer" aria-label="LinkedIn"><Linkedin size={16} /></a><a href="#contact-form" aria-label="Contact form"><Mail size={16} /></a></div>
+        <div className="footer-links"><a href="https://github.com/Utk2345" target="_blank" rel="noreferrer" aria-label="GitHub"><Github size={16} /></a><a href="https://www.linkedin.com" target="_blank" rel="noreferrer" aria-label="LinkedIn"><Linkedin size={16} /></a><a href="#contact-form" aria-label="Contact form"><Mail size={16} /></a></div>
       </footer>
 
-      <ProjectModal open={modalOpen} mode={modalMode} initialProject={editingProject} onClose={() => setModalOpen(false)} onSave={saveProject} />
+      {CAN_EDIT && <ProjectModal open={modalOpen} mode={modalMode} initialProject={editingProject} onClose={() => setModalOpen(false)} onSave={saveProject} />}
     </div>
   );
 }
