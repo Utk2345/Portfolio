@@ -31,6 +31,8 @@ type Project = {
   sourceUrl?: string;
   /** Optional card image: a path in client/public (e.g. "/projects/twelve-leaves.png") or a full URL. */
   image?: string;
+  /** Optional separate image for the large "Featured work" block (falls back to `image`). */
+  featuredImage?: string;
   featured?: boolean;
 };
 
@@ -68,7 +70,8 @@ const defaultProjects: Project[] = [
     theme: "lime",
     liveUrl: "https://habit-garden-nine.vercel.app",
     sourceUrl: "https://github.com/Utk2345/Twelve-Leaves",
-    image: "/projects/twelve-leaves.webp", // file lives in client/public/projects/
+    image: "/projects/twelve-leaves-logo.webp", // card in the archive grid
+    featuredImage: "/projects/twelve-leaves.webp", // big block under "Featured work"
     featured: true,
   },
 ];
@@ -118,7 +121,7 @@ const coverImageStyle = { position: "absolute", inset: 0, width: "100%", height:
 function ProjectArtwork({ project }: { project: Project }) {
   if (project.image) {
     return (
-      <div className={`artwork artwork--${project.theme}`}>
+      <div className={`artwork artwork--${project.theme}`} style={{ aspectRatio: "16 / 9" }}>
         <img src={project.image} alt={`${project.title} preview`} loading="lazy" style={coverImageStyle} />
       </div>
     );
@@ -250,6 +253,7 @@ function ProjectModal({
       liveUrl: form.liveUrl.trim() || undefined,
       sourceUrl: form.sourceUrl.trim() || undefined,
       image: form.image.trim() || undefined,
+      featuredImage: initialProject?.featuredImage,
       featured: initialProject?.featured,
     });
     onClose();
@@ -470,8 +474,8 @@ export default function Home() {
             </div>
             <article className="featured-card">
               <div className="featured-art">
-                {featuredProject.image ? (
-                  <img src={featuredProject.image} alt={`${featuredProject.title} preview`} style={coverImageStyle} />
+                {(featuredProject.featuredImage ?? featuredProject.image) ? (
+                  <img src={featuredProject.featuredImage ?? featuredProject.image} alt={`${featuredProject.title} preview`} style={coverImageStyle} />
                 ) : (
                   <>
                     <div className="featured-art__grid" />
